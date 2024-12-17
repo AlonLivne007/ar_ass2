@@ -1,7 +1,5 @@
 # importing system module for reading files
 import sys
-import itertools
-import random
 
 SAT = "sat"
 UNSAT = "unsat"
@@ -10,6 +8,15 @@ PROBLEM = "p"
 END = "0"
 
 learn_clauses = []
+
+lit_counter = {}
+
+
+def init_lit_counter(f):
+    for clause in f:
+        for l in clause:
+            lit_counter[l] = lit_counter.get(l, 0) + 1
+
 
 # in what follows, a *formula* is a collection of clauses,
 # a clause is a collection of literals,
@@ -40,18 +47,8 @@ def parse_dimacs_path(path):
             lines.append(integer_line)
     return lines, num_vars, num_clauses
 
-def evaluate(cnf, v):
-    for clause in cnf:
-        is_sat = False
-        for lit in clause:
-            var = abs(lit)
-            if v[var - 1] and lit > 0:
-                is_sat = True
-            elif not v[var - 1] and lit < 0:
-                is_sat = True
-        if not is_sat:
-            return False
-    return True
+
+
 
 
 # input cnf: a formula
@@ -67,9 +64,9 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         pre_m = m.copy() if m is not None else None
         pre_f = f.copy() if f is not None else None
         pre_d = d.copy() if d is not None else None
-        pre_k = k.copy() if k !="no" and k is not None else "no" if k is not None else None
+        pre_k = k.copy() if k != "no" and k is not None else "no" if k is not None else None
 
-        if num_conflict > 700: # like chaff
+        if num_conflict > 700:  # like chaff
             m, f, d, k = restart(m, f, d, k)
             if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
                 num_conflict = 0
@@ -78,6 +75,14 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         m, f, d, k = conflict(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             num_conflict += 1
+
+            # inc literal that were in the conflict
+            for lit in k:
+                lit_counter[lit] += 1
+            # divide every after 265 conflicts
+            if num_conflict % 256 == 0:
+                for lit in lit_counter:
+                    lit_counter[lit] //= 2
             continue
 
         m, f, d, k = explain(m, f, d, k)
@@ -114,8 +119,10 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         return True
     return "unknown"
 
+
 def restart(m, f, d, k):
     return [], f, [], "no"
+
 
 def learn(m, f, d, k):
     global learn_clauses
@@ -123,6 +130,7 @@ def learn(m, f, d, k):
         learn_clauses += [k]
         return m, f + [k], d, "no"
     return m, f, d, k
+
 
 def forget(m, f, d, k):
     global learn_clauses
@@ -133,6 +141,7 @@ def forget(m, f, d, k):
                 return m, f_minus_c, d, k
     return m, f, d, k
 
+
 def conflict(m, f, d, k):
     if k != "no":
         return m, f, d, k
@@ -140,6 +149,7 @@ def conflict(m, f, d, k):
         if model_conflict(m, [clause]):
             return m, f, d, clause
     return m, f, d, k
+
 
 def explain(m, f, d, k):
     if k == "no":
@@ -156,17 +166,20 @@ def explain(m, f, d, k):
                         return m, f, d, new_k
     return m, f, d, k
 
+
 def backjump(m, f, d, k):
     if k == "no" or len(d) == 0:
         return m, f, d, k
-    
+
     for l in k:
         for l0 in d:
             l0n = m[m.index(l0):]
             rest_model = m[:m.index(l0)]
             if all(-lit in rest_model for lit in k if lit != l) and -l in l0n:
-                return rest_model + [l], f, [lit for lit in d if lit not in l0n], "no"
+                return rest_model + [l], f, [lit for lit in d if
+                                             lit not in l0n], "no"
     return m, f, d, k
+
 
 def unit_propagate(m, f, d, k):
     if m is None and f is None and d is None:
@@ -186,7 +199,7 @@ def decide(m, f, d, k):
     if m == None and f == None and d == None:
         return m, f, d
 
-    l = choose_lit(m, f)
+    l = choose_lit_vsids(m)
 
     if l is None:
         return m, f, d, k
@@ -196,31 +209,14 @@ def decide(m, f, d, k):
     return m, f, d, k
 
 
-def choose_lit(m, f):
-    for c in f:
-        for l in c:
-            if l not in m and -l not in m:
-                return l
-    return None
 
 def fail(m, f, d, k):
     if len(d) == 0 and k != "no":
-            return None, None, None, None
+        return None, None, None, None
     return m, f, d, k
 
-# input m: a model
-# input f: a formula
-# output: True if model m is satisfy f.
-def model_evaluation(m, f):
-    for clause in f:
-        is_sat = False
-        for lit in clause:
-            if lit in m:
-                is_sat = True
-                break
-        if not is_sat:
-            return False
-    return True
+
+
 
 # input m: a model
 # input f: a formula
@@ -235,6 +231,21 @@ def model_conflict(m, f):
         if conflict:
             return True
     return False
+
+
+def choose_lit_vsids(m):
+    current_max=0
+    chosen_lit=None
+    for l,v in lit_counter.items():
+        if l not in m and -l not in m:
+            if v > current_max:
+                current_max=v
+                chosen_lit = l
+    return chosen_lit
+
+
+
+
 
 
 ######################################################################
