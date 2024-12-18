@@ -65,11 +65,19 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         pre_d = d.copy() if d is not None else None
         pre_k = k.copy() if k != "no" and k is not None else "no" if k is not None else None
 
+        m, f, d, k = fail(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            break
+
         if num_conflict > 700:  # like chaff
             m, f, d, k = restart(m, f, d, k)
             if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
                 num_conflict = 0
                 continue
+
+        m, f, d, k = unit_propagate(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            continue
 
         m, f, d, k = conflict(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
@@ -96,10 +104,6 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
 
-        m, f, d, k = unit_propagate(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            continue
-
         m, f, d, k = decide(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
@@ -108,9 +112,7 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
 
-        m, f, d, k = fail(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            break
+
 
     if k is None:
         return False

@@ -70,9 +70,35 @@ def cdcl_solve(cnf, n_vars, n_clauses):
                 num_conflict = 0
                 continue
 
+        m, f, d, k = fail(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            break
+
+        if num_conflict > 700:  # like chaff
+            m, f, d, k = restart(m, f, d, k)
+            if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+                num_conflict = 0
+                continue
+
+        m, f, d, k = decide(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            continue
+
+        m, f, d, k = unit_propagate(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            continue
+
         m, f, d, k = conflict(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             num_conflict += 1
+
+            # inc literal that were in the conflict
+            for lit in k:
+                lit_counter[lit] += 1
+            # divide every after 265 conflicts
+            if num_conflict % 256 == 0:
+                for lit in lit_counter:
+                    lit_counter[lit] //= 2
             continue
 
         m, f, d, k = explain(m, f, d, k)
@@ -87,21 +113,9 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
 
-        m, f, d, k = unit_propagate(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            continue
-
-        m, f, d, k = decide(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            continue
-
         m, f, d, k = forget(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
-
-        m, f, d, k = fail(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            break
 
     if k is None:
         return False
