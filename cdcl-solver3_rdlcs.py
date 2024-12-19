@@ -64,12 +64,6 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         pre_d = d.copy() if d is not None else None
         pre_k = k.copy() if k != "no" and k is not None else "no" if k is not None else None
 
-        if num_conflict > 700:  # like chaff
-            m, f, d, k = restart(m, f, d, k)
-            if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-                num_conflict = 0
-                continue
-
         m, f, d, k = fail(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             break
@@ -80,21 +74,13 @@ def cdcl_solve(cnf, n_vars, n_clauses):
                 num_conflict = 0
                 continue
 
-        m, f, d, k = decide(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            continue
-
-        m, f, d, k = unit_propagate(m, f, d, k)
-        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
-            continue
-
         m, f, d, k = conflict(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             num_conflict += 1
 
             # inc literal that were in the conflict
             for lit in k:
-                lit_counter[lit] += 1
+                lit_counter[abs(lit)] += 1
             # divide every after 265 conflicts
             if num_conflict % 256 == 0:
                 for lit in lit_counter:
@@ -105,13 +91,22 @@ def cdcl_solve(cnf, n_vars, n_clauses):
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
 
+        m, f, d, k = unit_propagate(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            continue
+
         m, f, d, k = learn(m, f, d, k)
+        if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
+            continue
+
+        m, f, d, k = decide(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
 
         m, f, d, k = backjump(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
             continue
+
 
         m, f, d, k = forget(m, f, d, k)
         if (pre_m, pre_f, pre_d, pre_k) != (m, f, d, k):
@@ -252,6 +247,8 @@ path = sys.argv[1]
 
 # parse the file
 cnf, num_vars, num_clauses = parse_dimacs_path(path)
+
+init_lit_counter(cnf)
 
 # check satisfiability based on the chosen algorithm
 # and print the result

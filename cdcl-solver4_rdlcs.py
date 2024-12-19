@@ -84,7 +84,7 @@ def cdcl_solve(cnf, n_vars, n_clauses):
 
             # inc literal that were in the conflict
             for lit in k:
-                lit_counter[lit] += 1
+                lit_counter[abs(lit)] += 1
             # divide every after 265 conflicts
             if num_conflict % 256 == 0:
                 for lit in lit_counter:
@@ -246,6 +246,8 @@ path = sys.argv[1]
 
 # parse the file
 cnf, num_vars, num_clauses = parse_dimacs_path(path)
+
+init_lit_counter(cnf)
 
 # check satisfiability based on the chosen algorithm
 # and print the result

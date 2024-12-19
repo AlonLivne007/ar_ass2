@@ -1,16 +1,16 @@
 import os
 import random
 
-# פונקציה ליצירת פסוקית עם 3 ליטרלים ייחודיים
+# Function to create a clause with 3 unique literals
 def generate_clause(num_vars):
     clause = set()
     while len(clause) < 3:
-        literal = random.randint(1, num_vars)  # בחר משתנה
-        literal *= random.choice([-1, 1])  # שלילה או לא
+        literal = random.randint(1, num_vars)  # Choose a variable
+        literal *= random.choice([-1, 1])  # Negate or not
         clause.add(literal)
-    return tuple(sorted(clause))  # המרת ליטרלים לפסוקית ייחודית
+    return tuple(sorted(clause))  # Convert literals to a unique clause
 
-# פונקציה ליצירת קובץ CNF
+# Function to create a CNF file
 def create_cnf_file(file_path, num_vars, num_clauses):
     clauses = set()
     while len(clauses) < num_clauses:
@@ -18,27 +18,26 @@ def create_cnf_file(file_path, num_vars, num_clauses):
         clauses.add(clause)
 
     with open(file_path, "w") as f:
-        # כתיבת כותרת הקובץ לפי פורמט DIMACS
+        # Write the file header in DIMACS format
         f.write(f"p cnf {num_vars} {num_clauses}\n")
         for clause in clauses:
             f.write(" ".join(map(str, clause)) + " 0\n")
 
-# הגדרות
+# Settings
 OUTPUT_DIR = "benchmark"
 NUM_FILES = 100
 NUM_VARS = 50
-PHASE_TRANSITION_RATIO = 4.3  # יחס ההעברה לפי מה שראינו בתרגול
-NUM_CLAUSES = int(NUM_VARS * PHASE_TRANSITION_RATIO)
+NUM_CLAUSES = 222  # Total clauses (fixed value)
 
-# יצירת התיקייה אם לא קיימת
+# Create the output directory if it does not exist
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
-# יצירת 100 קבצים
+# Generate 100 files
 for i in range(1, NUM_FILES + 1):
     file_name = f"formula_{i}.cnf"
     file_path = os.path.join(OUTPUT_DIR, file_name)
     create_cnf_file(file_path, NUM_VARS, NUM_CLAUSES)
-    print(f"נוצר קובץ: {file_path}")
+    print(f"File created: {file_path}")
 
-print("סיום יצירת הקבצים!")
+print("Finished creating files!")
